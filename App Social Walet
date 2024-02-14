@@ -1,0 +1,91 @@
+// Importación de librerías
+import android.os.Bundle
+import android.view.View
+import com.google.firebase.auth.FirebaseAuth
+import com.google.firebase.database.FirebaseDatabase
+import org.web3j.crypto.Credentials
+import org.web3j.protocol.Web3j
+import org.web3j.protocol.http.HttpService
+import org.webrtc.MediaStream
+import io.agora.rtc.IRtcEngineEventHandler
+import io.agora.rtc.RtcEngine
+
+class MainActivity : AppCompatActivity() {
+
+    private lateinit var firebaseAuth: FirebaseAuth
+    private lateinit var firebaseDatabase: FirebaseDatabase
+    private lateinit var web3j: Web3j
+    private lateinit var keystore: Keystore
+    private lateinit var mediaStream: MediaStream
+    private lateinit var agoraRtcEngine: RtcEngine
+
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
+        setContentView(R.layout.activity_main)
+
+        // Inicialización de Firebase
+        firebaseAuth = FirebaseAuth.getInstance()
+        firebaseDatabase = FirebaseDatabase.getInstance()
+
+        // Inicialización de Web3j
+        web3j = Web3j.build(HttpService("https://mainnet.infura.io/v3/YOUR_INFURA_API_KEY"))
+
+        // Inicialización del keystore
+        keystore = Keystore.getInstance(this)
+
+        // Inicialización de MediaStream para transmisión en vivo
+        mediaStream = MediaStream.Factory.createEmptyMediaStream()
+
+        // Inicialización de Agora RTC Engine para transmisión en vivo
+        agoraRtcEngine = RtcEngine.create(this, YOUR_AGORA_APP_ID, YOUR_AGORA_APP_CERTIFICATE)
+
+        // Botón para registrar usuario
+        val btnRegister = findViewById<View>(R.id.btn_register)
+        btnRegister.setOnClickListener {
+            // Obtener el nombre de usuario y contraseña del usuario
+            val username = findViewById<EditText>(R.id.et_username).text.toString()
+            val password = findViewById<EditText>(R.id.et_password).text.toString()
+
+            // Registrar al usuario en Firebase
+            firebaseAuth.createUserWithEmailAndPassword(username, password)
+                .addOnCompleteListener { task ->
+                    if (task.isSuccessful) {
+                        // Almacenar la información de la wallet en Firebase de forma segura
+                        val user = firebaseAuth.currentUser
+                        val uid = user?.uid
+                        firebaseDatabase.getReference("users/$uid/wallet").setValue(
+                            Wallet(
+                                address = credentials.address,
+                                balance = 0.0
+                            )
+                        )
+
+                        // Mostrar un mensaje de éxito
+                        Toast.makeText(this, "Usuario registrado correctamente", Toast.LENGTH_SHORT).show()
+                    } else {
+                        // Mostrar un mensaje de error
+                        Toast.makeText(this, "Error al registrar usuario", Toast.LENGTH_SHORT).show()
+                    }
+                }
+        }
+
+        // Función para traducir una cadena de texto
+        fun traducir(texto: String, idioma: String): String {
+            // Obtener el traductor para el idioma especificado
+            val traductor = GoogleTranslate.getInstance()
+
+            // Traducir la cadena de texto
+            val traduccion = traductor.translate(texto, idioma)
+
+            // Devolver la traducción
+            return traduccion
+        }
+
+        // Ejemplo de uso de la función de traducción
+        val texto = "Hola mundo!"
+        val idioma = "es"
+        val traduccion = traducir(texto, idioma)
+        println("La traducción es: $traduccion")
+    }
+}
+
